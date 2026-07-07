@@ -1,8 +1,8 @@
 services:
-  app:
+  filehost_app:
     build: .
     environment:
-      - DATABASE_URL=postgresql://filehost:filehost_internal_db_pass@db:5432/filehost
+      - DATABASE_URL=postgresql://filehost:filehost_internal_db_pass@filehost_db:5432/filehost
       - NODE_OPTIONS=--dns-result-order=ipv4first
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUST_HOST=true
@@ -12,19 +12,19 @@ services:
       - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
       - R2_CUSTOM_DOMAIN=${R2_CUSTOM_DOMAIN}
     depends_on:
-      db:
+      filehost_db:
         condition: service_healthy
     restart: unless-stopped
     # No public ports — reverse proxy (Dokploy/Traefik) handles HTTPS
 
-  db:
+  filehost_db:
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=filehost
       - POSTGRES_PASSWORD=filehost_internal_db_pass
       - POSTGRES_DB=filehost
     volumes:
-      - filehost_db_data:/var/lib/postgresql/data
+      - filehost_data_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U filehost"]
       interval: 5s
@@ -33,4 +33,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  filehost_db_data:
+  filehost_data_v2:
