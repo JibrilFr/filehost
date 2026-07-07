@@ -1,4 +1,4 @@
-import cron from "node-cron";
+
 
 /**
  * Next.js Instrumentation hook.
@@ -6,16 +6,27 @@ import cron from "node-cron";
  * a periodic cleanup of expired files.
  */
 export async function register() {
-  // Only run on the server side (not during build or in the browser)
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    console.log("[init] Running database migrations...");
+    const { migrate } = await import("drizzle-orm/postgres-js/migrator");
+    const { db } = await import("@/lib/db");
+    const { seedDefaultSettings } = await import("@/lib/settings");
+    
+    try {
+      await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
+      console.log("[init] Migrations complete.");
+      await seedDefaultSettings();
+      console.log("[init] Settings seeded.");
+    } catch (error) {
+      console.error("[init] Migration failed:", error);
+    }
+
     // Schedule cleanup every hour
+    const cron = (await import("node-cron")).default;
     cron.schedule("0 * * * *", async () => {
       try {
         console.log("[cron] Running expired files cleanup...");
-        // Dynamic import to avoid importing DB modules during build
-        const { cleanupExpiredFiles } = await import(
-          "@/lib/cleanup"
-        );
+        const { cleanupExpiredFiles } = await import("@/lib/cleanup");
         await cleanupExpiredFiles();
         console.log("[cron] Cleanup complete.");
       } catch (error) {
